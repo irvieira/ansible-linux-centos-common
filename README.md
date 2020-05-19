@@ -13,5 +13,7 @@
 **How to clone the repository**
 
 **Shell commands**
-`$ cd  $ANSIBLE_FOLDER/linux_common`;
-`$ git clone https://github.com/irvieira/ansible-linux-centos-common.git`;
+``
+$ cd  $ANSIBLE_FOLDER/linux_common`
+$ git clone https://github.com/irvieira/ansible-linux-centos-common.git
+``
