@@ -1,8 +1,0 @@
----
-# tasks file for haproxy
-
-- name: Change HAproxy.cfg
-  template: src=haproxy.cfg dest=/etc/haproxy/haproxy.cfg force=yes owner=root group=root mode=0755 backup=yes
-  notify:
-    - restart haproxy
-...
