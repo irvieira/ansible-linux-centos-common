@@ -1,0 +1,326 @@
+global
+   log /dev/log local0 
+   log /dev/log local1 debug 
+   chroot /var/lib/haproxy
+   stats socket *:1999 level admin
+   stats socket /var/run/haproxy.sock mode 600 level admin
+   server-state-file /etc/haproxy/haproxy/haproxy.state
+   user haproxy
+   group haproxy
+   daemon
+
+defaults
+   log global
+   mode http
+   load-server-state-from-file global 
+   option dontlognull
+   timeout connect 2000
+   timeout client 50000
+   timeout server 2000
+
+frontend fe_dmz_gcs_iis
+   bind ap-gcs-wsg.gtcs.local:8080
+   mode tcp
+   use_backend be_dmz_gcs_iis
+   default_backend be_dmz_gcs_iis
+
+frontend fe_dmz_gcs_app
+   bind ap-gcs-wsg.gtcs.local:9080
+   mode tcp
+   use_backend be_dmz_gcs_app
+   default_backend be_dmz_gcs_app
+
+frontend fe_iis_gcs
+   bind ap-gcs-iis.gtcs.local:8080
+   mode tcp
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_iis_gcs if ip_24
+   use_backend be25_iis_gcs if ip_25
+   default_backend be24_iis_gcs
+
+frontend fe_app_gcs
+   bind ap-gcs-app.gtcs.local:9080
+   mode tcp 
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_app_gcs if ip_24
+   use_backend be25_app_gcs if ip_25
+   default_backend be24_app_gcs
+
+frontend fe_hdr
+   bind ap-ms-app.gtcs.local:5601
+   mode http
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_hdr if ip_24
+   use_backend be25_hdr if ip_25
+   default_backend be24_hdr
+
+frontend fe_iis_fras
+   bind ap-ms-iis.gtcs.local:8081
+   mode http
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_iis_fras if ip_24
+   use_backend be25_iis_fras if ip_25
+   default_backend be24_iis_fras
+
+frontend fe_app_fras
+   bind ap-ms-app.gtcs.local:9081
+   mode http
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_app_fras if ip_24
+   use_backend be25_app_fras if ip_25
+   default_backend be24_app_fras
+
+frontend fe_iis_dda
+   bind ap-ms-iis.gtcs.local:8082
+   mode http
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_iis_dda if ip_24
+   use_backend be25_iis_dda if ip_25
+   default_backend be24_iis_dda
+
+frontend fe_app_dda
+   bind ap-ms-app.gtcs.local:9082
+   mode http
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_app_dda if ip_24
+   use_backend be25_app_dda if ip_25
+   default_backend be24_app_dda
+
+frontend fe_ofbiz
+   bind ap-ms-mms.gtcs.local:8443
+   mode tcp
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_ofbiz if ip_24
+   use_backend be25_ofbiz if ip_25
+   default_backend be24_ofbiz
+
+frontend fe_mss
+   bind ap-mss.gtcs.local:27667
+   mode tcp
+   acl ip_24 src 10.24.0.0/16
+   acl ip_25 src 10.25.0.0/16
+   use_backend be24_mss if ip_24
+   use_backend be25_mss if ip_25
+   default_backend be24_mss
+
+backend be_dmz_gcs_iis
+   balance source
+   mode http 
+   option forwardfor
+   option httpchk GET /SystemParametersConfiguration.html
+   http-check disable-on-404
+   server gt-gcs-dmz-iis1 gt-gcs-wsg1.gtcs.local:8080 check 
+   server gt-gcs-dmz-iis2 gt-gcs-wsg1.gtcs.local:8080 check
+   server br-gcs-dmz-iis1 br-gcs-wsg1.gtcs.local:8080 check backup
+   server br-gcs-dmz-iis2 br-gcs-wsg1.gtcs.local:8080 check backup
+
+backend be_dmz_gcs_app
+   balance source
+   mode tcp 
+   option httpchk GET /systemConfigurationService/json/reply/GetSystemConfigurationSettingsRequest HTTP/1.1
+   http-check expect status 400
+   server gt-gcs-dmz-app1 gt-gcs-wsg1.gtcs.local:9080 check 
+   server gt-gcs-dmz-app2 gt-gcs-wsg1.gtcs.local:9080 check
+   server br-gcs-dmz-app1 br-gcs-wsg1.gtcs.local:9080 check backup
+   server br-gcs-dmz-app2 br-gcs-wsg1.gtcs.local:9080 check backup
+
+backend be24_iis_gcs
+   balance source
+   mode http 
+   option forwardfor
+   option httpchk GET /SystemParametersConfiguration.html
+   http-check disable-on-404
+   server gt-iis-gcs-app1 gt-gcs-app1.gtcs.local:8080 check 
+   server gt-iis-gcs-app2 gt-gcs-app2.gtcs.local:8080 check
+   server br-iis-gcs-app1 br-gcs-app1.gtcs.local:8080 check backup
+   server br-iis-gcs-app2 br-gcs-app2.gtcs.local:8080 check backup
+
+backend be24_app_gcs
+   balance source
+   mode tcp 
+   option httpchk GET /systemConfigurationService/json/reply/GetSystemConfigurationSettingsRequest HTTP/1.1
+   http-check expect status 400
+   server gt-gcs-app1 gt-gcs-app1.gtcs.local:9080 check 
+   server gt-gcs-app2 gt-gcs-app2.gtcs.local:9080 check
+   server br-gcs-app1 br-gcs-app1.gtcs.local:9080 check backup
+   server br-gcs-app2 br-gcs-app2.gtcs.local:9080 check backup
+
+backend be25_iis_gcs
+   balance source
+   mode http 
+   option forwardfor   
+   option httpchk GET /SystemParametersConfiguration.html
+   http-check disable-on-404
+   server br-iis-gcs-app1 br-gcs-app1.gtcs.local:8080 check
+   server br-iis-gcs-app2 br-gcs-app2.gtcs.local:8080 check
+   server gt-iis-gcs-app1 gt-gcs-app1.gtcs.local:8080 check backup
+   server gt-iis-gcs-app2 gt-gcs-app2.gtcs.local:8080 check backup
+
+backend be25_app_gcs
+   balance source
+   mode tcp 
+   option httpchk GET /systemConfigurationService/json/reply/GetSystemConfigurationSettingsRequest HTTP/1.1
+   http-check expect status 400
+   server br-gcs-app1 br-gcs-app1.gtcs.local:9080 check 
+   server br-gcs-app2 br-gcs-app2.gtcs.local:9080 check 
+   server gt-gcs-app1 gt-gcs-app1.gtcs.local:9080 check backup
+   server gt-gcs-app2 gt-gcs-app2.gtcs.local:9080 check backup
+
+backend be24_hdr
+   mode http
+   option forwardfor
+   option httpchk GET /
+   server gt-hdr-01 gt-ms-app1.gtcs.local:5601 check
+   server gt-hdr-02 gt-ms-app2.gtcs.local:5601 check
+   server br-hdr-01 br-ms-app1.gtcs.local:5601 check backup
+   server br-hdr-02 br-ms-app2.gtcs.local:5601 check backup
+
+backend be25_hdr
+   mode http
+   option forwardfor
+   option httpchk GET /
+   server br-hdr-01 br-ms-app1.gtcs.local:5601 check
+   server br-hdr-02 br-ms-app2.gtcs.local:5601 check
+   server gt-hdr-01 gt-ms-app1.gtcs.local:5601 check backup
+   server gt-hdr-02 gt-ms-app2.gtcs.local:5601 check backup
+
+backend be24_iis_fras
+   mode http
+   option forwardfor
+   option httpchk GET /FRAS/RuleTemplate?id= 
+   server gt-iis-fras-01 gt-ms-app1.gtcs.local:8081 check 
+   server gt-iis-fras-02 gt-ms-app2.gtcs.local:8081 check  
+   server br-iis-fras-01 br-ms-app1.gtcs.local:8081 check backup
+   server br-iis-fras-02 br-ms-app2.gtcs.local:8081 check backup
+   
+backend be24_app_fras
+   mode http
+   option forwardfor
+   option httpchk GET /RootCauseAnalysisService 
+   http-check expect status 400
+   server gt-fras-01 gt-ms-app1.gtcs.local:9081 check 
+   server gt-fras-02 gt-ms-app2.gtcs.local:9081 check 
+   server br-fras-01 br-ms-app1.gtcs.local:9081 check backup
+   server br-fras-02 br-ms-app2.gtcs.local:9081 check backup  
+       
+
+backend be25_iis_fras
+   mode http
+   option forwardfor
+   option httpchk GET /FRAS/RuleTemplate?id=  
+   server br-iis-fras-01 br-ms-app1.gtcs.local:8081 check
+   server br-iis-fras-02 br-ms-app2.gtcs.local:8081 check
+   server gt-iis-fras-01 gt-ms-app1.gtcs.local:8081 check backup
+   server gt-iis-fras-02 gt-ms-app2.gtcs.local:8081 check backup   
+
+
+backend be25_app_fras
+   mode http
+   option forwardfor
+   option httpchk GET /RootCauseAnalysisService
+   http-check expect status 400
+   server br-fras-01 br-ms-app1.gtcs.local:9081 check
+   server br-fras-02 br-ms-app2.gtcs.local:9081 check
+   server gt-fras-01 gt-ms-app1.gtcs.local:9081 check backup
+   server gt-fras-02 gt-ms-app2.gtcs.local:9081 check backup  
+
+backend be24_iis_dda
+   mode http
+   option forwardfor
+   option httpchk GET /DDA/Equipment HTTP/1.1 
+   http-check expect status 400 
+   server gt-iis-dda-01 gt-ms-app1.gtcs.local:8082 check
+   server gt-iis-dda-02 gt-ms-app2.gtcs.local:8082 check
+   server br-iis-dda-01 br-ms-app1.gtcs.local:8082 check backup
+   server br-iis-dda-02 br-ms-app2.gtcs.local:8082 check backup
+
+backend be25_iis_dda
+   mode http
+   option forwardfor
+   option httpchk GET /DDA/Equipment HTTP/1.1
+   http-check expect status 400 
+   server br-iis-dda-01 br-ms-app1.gtcs.local:8082 check 
+   server br-iis-dda-02 br-ms-app2.gtcs.local:8082 check 
+   server gt-iis-dda-01 gt-ms-app1.gtcs.local:8082 check backup
+   server gt-iis-dda-02 gt-ms-app2.gtcs.local:8082 check backup
+   
+
+backend be24_app_dda
+   mode http
+   option forwardfor
+   option httpchk GET /ManagerService
+   http-check expect status 400 
+   server gt-dda-01 gt-ms-app1.gtcs.local:9082 check
+   server gt-dda-02 gt-ms-app2.gtcs.local:9082 check
+   server br-dda-01 br-ms-app1.gtcs.local:9082 check backup
+   server br-dda-02 br-ms-app2.gtcs.local:9082 check backup
+
+backend be25_app_dda
+   mode http
+   option forwardfor
+   option httpchk GET /ManagerService 
+   http-check expect status 400
+   server br-dda-01 br-ms-app1.gtcs.local:9082 check 
+   server br-dda-02 br-ms-app2.gtcs.local:9082 check 
+   server gt-dda-01 gt-ms-app1.gtcs.local:9082 check backup
+   server gt-dda-02 gt-ms-app2.gtcs.local:9082 check backup
+
+backend be24_ofbiz
+   mode tcp
+   option ssl-hello-chk
+   balance roundrobin
+   stick-table type ip size 200k expire 30m
+   stick on src
+   default-server inter 5s
+   server gt-ofbiz-01 gt-ms-mms1.gtcs.local:8443 check id 1
+   server gt-ofbiz-02 gt-ms-mms2.gtcs.local:8443 check id 2
+   server br-ofbiz-01 br-ms-mms1.gtcs.local:8443 check id 3 backup
+   server br-ofbiz-02 br-ms-mms2.gtcs.local:8443 check id 4 backup
+
+backend be25_ofbiz
+   mode tcp
+   option ssl-hello-chk
+   balance roundrobin
+   stick-table type ip size 200k expire 30m
+   stick on src
+   default-server inter 1s
+   server br-ofbiz-01 br-ms-mms1.gtcs.local:8443 check id 1
+   server br-ofbiz-02 br-ms-mms2.gtcs.local:8443 check id 2
+   server gt-ofbiz-01 gt-ms-mms1.gtcs.local:8443 check id 3 backup
+   server gt-ofbiz-02 gt-ms-mms2.gtcs.local:8443 check id 4 backup  
+
+backend be24_mss
+   mode tcp 
+   balance source
+   option forwardfor
+   option httpchk GET /Alstom.Mimic.Framework.Security.Web.AlsSecurityService.svc
+   server gt-mss-01 gt-mss-01.gtcs.local:27667 check 
+   server gt-mss-02 gt-mss-02.gtcs.local:27667 check
+   server br-mss-01 br-mss-01.gtcs.local:27667 check backup
+   server br-mss-02 br-mss-02.gtcs.local:27667 check backup
+
+backend be25_mss
+   mode tcp 
+   balance source
+   option forwardfor
+   option httpchk GET /Alstom.Mimic.Framework.Security.Web.AlsSecurityService.svc
+   server br-mss-01 br-mss-01.gtcs.local:27667 check
+   server br-mss-02 br-mss-02.gtcs.local:27667 check
+   server gt-mss-01 gt-mss-01.gtcs.local:27667 check backup
+   server gt-mss-02 gt-mss-02.gtcs.local:27667 check backup
+
+listen stats
+   bind 10.26.106.110:1936
+   stats enable
+   stats admin if TRUE
+   stats uri /stats
+   stats hide-version
+   stats auth admin:Alstom1050

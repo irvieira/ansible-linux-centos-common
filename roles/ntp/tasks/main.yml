@@ -1,0 +1,39 @@
+---
+- name: Copy NTP Files
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+  copy:
+    src: 'files/'
+    dest: '/tmp/'
+
+- name: Install NTP with YUM
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+  yum: 
+    name: 
+        - /tmp/ntp-4.2.6p5-29.el7.centos.x86_64.rpm
+        - /tmp/autogen-libopts-5.18-5.el7.x86_64.rpm
+        - /tmp/ntpdate-4.2.6p5-29.el7.centos.x86_64.rpm
+    state: present    
+
+- name: Enable ntp service
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+  systemd: 
+    name: ntpd
+    daemon_reload: yes
+    enabled: yes    
+    state: started
+
+- name: NTP Config GTCC
+  when: 
+    - ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat' 
+    - ansible_hostname is match("^GT-") or ansible_hostname is match("^gt-") or ansible_hostname is match("^GCS-") or ansible_hostname is match("^gcs-")
+  template: src=ntp_gtcc.conf dest=/etc/ntp.conf force=yes owner=root group=root mode=0644 backup=no
+  notify:
+    - restart ntp
+    
+- name: NTP Config BRC
+  when: 
+    - ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    - ansible_hostname is match("^BR-") or ansible_hostname is match("^br-")
+  template: src=ntp_brc.conf dest=/etc/ntp.conf force=yes owner=root group=root mode=0644 backup=no
+  notify:
+    - restart ntp

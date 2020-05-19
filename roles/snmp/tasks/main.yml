@@ -1,0 +1,37 @@
+---
+- name: Copy SNMP Files
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+  copy:
+    src: 'files/'
+    dest: '/tmp/'
+
+- name: Install SNMP with YUM
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+  yum: 
+    name: 
+        - /tmp/net-snmp-5.7.2-48.el7_8.x86_64.rpm
+        - /tmp/net-snmp-agent-libs-5.7.2-48.el7_8.x86_64.rpm
+        - /tmp/net-snmp-libs-5.7.2-48.el7_8.x86_64.rpm
+        - /tmp/perl-Data-Dumper-2.145-3.el7.x86_64.rpm
+    state: present    
+
+- name: Enable SNMP service
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+  systemd: 
+    name: snmpd
+    daemon_reload: yes
+    enabled: yes    
+    state: started
+    
+- name: SNMP Config
+  when: 
+    - ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat' 
+  template: src=snmpd.conf dest=/etc/snmp/snmpd.conf force=yes owner=root group=root mode=0644 backup=no
+  notify:
+    - restart snmpd
+
+- name: ADD SNMP Ports
+  firewalld:
+    port: 161-162/udp
+    permanent: yes    
+    state: enabled

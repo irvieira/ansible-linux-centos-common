@@ -1,0 +1,9 @@
+---
+- name: restart snmpd 
+  systemd: 
+    name: snmpd
+    daemon_reload: yes
+    enabled: yes    
+    state: restarted
+  
+...  
